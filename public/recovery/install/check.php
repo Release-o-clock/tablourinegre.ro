@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 
 error_reporting(-1);
-ini_set('display_errors', '1');
+ini_set('display_errors', true);
 
 $tokenFile = __DIR__ . '/tmp/token';
 $token = '';
@@ -22,7 +22,7 @@ if (!$token
 }
 
 $result = [
-    'phpversion' => PHP_VERSION,
+    'phpversion' => \PHP_VERSION,
 ];
 
-echo json_encode($result, JSON_PRETTY_PRINT);
+echo json_encode($result, \JSON_PRETTY_PRINT);

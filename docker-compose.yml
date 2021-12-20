@@ -1,45 +1,73 @@
-#override defaults for dev
-version: "3.7"
+version: "3"
 
 services:
-  app_server:
-    image: shopware-production:local
-    build: .
-    depends_on:
-      - mysql
-      - elasticsearch
+  shop:
+    container_name: tablouri_negre_shop
+    image: dockware/dev:6.4.5.1
     ports:
-      - 8000:8000
-      - 8005:8000
-    extra_hosts:
-      - "docker.vm:127.0.0.1"
-    environment:
-      # define yourself
-      #- DATABASE_URL
-      - APP_URL=http://docker.vm:8000
-      - INSTANCE_ID=
-      - SHOPWARE_ES_ENABLED=1
-      - SHOPWARE_ES_HOSTS=elasticsearch:9200
-      - SHOPWARE_ES_INDEXING_ENABLED=1
-      - SHOPWARE_ES_INDEX_PREFIX=sw
-      - SHOPWARE_CDN_STRATEGY_DEFAULT=id
-      - MAILER_URL=smtp://localhost:25?encryption=&auth_mode=
+      - "80:80" # apache2
+      - "443:443" # apache2
+      - "22:22" # ssh
+      - "8888:8888" # watch admin
+      - "9999:9999" # watch storefront
+      - "9998:9998" # watch storefront proxy
     volumes:
-      - "./config/jwt:/sw6/config/jwt"
-      - "./public/bundles:/sw6/public/bundles"
-      - "./public/media:/sw6/public/media"
-      - "./public/sitemap:/sw6/public/sitemap"
-      - "./public/theme:/sw6/public/theme"
-      - "./public/thumbnail:/sw6/public/thumbnail"
-      - "./var:/sw6/var"
-
-  mysql:
-    image: mysql:5.7
+      - "nfsmount:/var/www/html"
+    networks:
+      - web
     environment:
-      - MYSQL_ROOT_PASSWORD=root
+      - XDEBUG_ENABLED=0
+
+  redis:
+    image: redis:6.2.4-alpine
+    container_name: redis
+    networks:
+      - web
 
   elasticsearch:
-    image: elastic/elasticsearch:7.8.0
+    image: elasticsearch:7.5.2
+    container_name: tablouri_negre_elasticsearch
+    networks:
+      - web
     environment:
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "EA_JAVA_OPTS=-Xms512m -Xms512m"
       - discovery.type=single-node
+
+  mariadb:
+    image: mariadb:10.5.12-focal
+    container_name: tablouri_negre_mariadb
+    networks:
+      - web
+    ports:
+      - "3306:3306"
+    volumes:
+      - "mariadb:/var/lib/mysql"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: app
+      MYSQL_PASSWORD: app
+      MYSQL_DATABASE: shopware
+
+  adminer:
+    container_name: tablouri_negre_adminer
+    image: adminer:latest
+    ports:
+      - "8181:8080"
+
+
+## ***********************************************************************
+##  PERSISTENT DOCKER VOLUMES
+## ***********************************************************************
+volumes:
+  nfsmount:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr=host.docker.internal,rw,nolock,hard,nointr,nfsvers=3
+      device: ":$PWD/."
+  mariadb:
+    driver: local
+
+networks:
+  web:
+    external: false
